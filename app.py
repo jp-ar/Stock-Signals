@@ -1,12 +1,23 @@
 import streamlit as st
 import yfinance as yf
+import requests
 from db import get_tickers, add_ticker, remove_ticker
 from auth import login, signup, logout
-# Aunque esta línea aparece gris, es correcta si más adelante vas a usar supabase directamente
 from supabase_client import supabase
 from scripts.macd_1mo import analizar_macd_mensual
 
 st.set_page_config(page_title="Stock Signals", layout="centered")
+
+# Función para sugerencias de tickers desde Yahoo Finance
+def buscar_tickers_similares(entrada):
+    url = f"https://query2.finance.yahoo.com/v1/finance/search?q={entrada}"
+    try:
+        response = requests.get(url)
+        resultados = response.json()
+        sugerencias = [r["symbol"] for r in resultados.get("quotes", []) if "symbol" in r]
+        return sugerencias
+    except:
+        return []
 
 # Autenticación
 if "user" not in st.session_state:
@@ -39,16 +50,27 @@ else:
 
 # Agregar nuevo ticker
 st.subheader("➕ Add a ticker")
-new_ticker = st.text_input("Example: AAPL")
+new_ticker = st.text_input("Example: AAPL").strip().upper()
+
 if st.button("Add Ticker"):
     if new_ticker:
         try:
-            yf.Ticker(new_ticker).info  # Validar ticker
-            add_ticker(user_id, new_ticker)
-            st.success(f"{new_ticker.upper()} added.")
-            st.experimental_rerun()
+            data = yf.Ticker(new_ticker).info
+            if data:  # Si info no está vacío
+                add_ticker(user_id, new_ticker)
+                st.success(f"{new_ticker} added.")
+                st.experimental_rerun()
+            else:
+                raise ValueError("Empty info")
         except:
-            st.error("Invalid ticker")
+            st.error("❌ Invalid ticker.")
+            sugerencias = buscar_tickers_similares(new_ticker)
+            if sugerencias:
+                st.info("🔍 Did you mean one of these?")
+                for s in sugerencias[:5]:
+                    st.markdown(f"- **{s}**")
+            else:
+                st.info("No similar tickers found.")
 
 st.divider()
 
@@ -96,11 +118,13 @@ if st.button("Run analysis"):
                 for ticker in resultados["sin_procesar"]:
                     st.markdown(f"- {ticker}")
 
+coffee_link = st.secrets["BUYMEACOFFEE_LINK"]
+
 st.markdown("---")
 st.markdown("## ☕ Support this project")
 st.markdown(
-    """
-    <a href="https://www.buymeacoffee.com/jp_ar" target="_blank">
+    f"""
+    <a href="{coffee_link}" target="_blank">
         <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=jp_ar&button_colour=FFDD00&font_colour=000000&font_family=Arial&outline_colour=000000&coffee_colour=ffffff" />
     </a>
     """,
