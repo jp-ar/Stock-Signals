@@ -1,5 +1,6 @@
 import streamlit as st
 import yfinance as yf
+from yahooquery import search as ysearch
 import requests
 from db import get_tickers, add_ticker, remove_ticker
 from auth import login, signup, logout
@@ -49,28 +50,37 @@ else:
     st.info("No tickers added yet.")
 
 # Agregar nuevo ticker
-st.subheader("➕ Add a ticker")
-new_ticker = st.text_input("Example: AAPL").strip().upper()
 
-if st.button("Add Ticker"):
-    if new_ticker:
+st.subheader("➕ Add a ticker")
+
+query = st.text_input("🔍 Search a company or ticker", key="ticker_search")
+sugerencias = []
+
+if query:
+    try:
+        resultados = ysearch(query)
+        sugerencias = [f"{item['symbol']} - {item.get('shortname', '')}"
+                       for item in resultados.get("quotes", []) if "symbol" in item]
+    except:
+        sugerencias = []
+
+if sugerencias:
+    selected = st.selectbox("Select a ticker", sugerencias, key="select_suggestion")
+    ticker_seleccionado = selected.split(" - ")[0]
+
+    if st.button("Add Ticker"):
         try:
-            data = yf.Ticker(new_ticker).info
-            if data:  # Si info no está vacío
-                add_ticker(user_id, new_ticker)
-                st.success(f"{new_ticker} added.")
+            data = yf.Ticker(ticker_seleccionado).info
+            if data:
+                add_ticker(user_id, ticker_seleccionado)
+                st.success(f"{ticker_seleccionado} added.")
                 st.experimental_rerun()
             else:
                 raise ValueError("Empty info")
         except:
-            st.error("❌ Invalid ticker.")
-            sugerencias = buscar_tickers_similares(new_ticker)
-            if sugerencias:
-                st.info("🔍 Did you mean one of these?")
-                for s in sugerencias[:5]:
-                    st.markdown(f"- **{s}**")
-            else:
-                st.info("No similar tickers found.")
+            st.error("❌ Could not validate ticker.")
+else:
+    st.info("Start typing a company or ticker name.")
 
 st.divider()
 
