@@ -20,7 +20,7 @@ def login():
             if res.user:
                 st.session_state["user"] = res.user
                 st.success("Logged in successfully")
-                st.rerun()  # Aquí es correcto usar st.rerun()
+                st.rerun()  # Recarga la página después del login exitoso
             else:
                 st.error("Login failed. Please check your credentials.")
 
@@ -40,18 +40,19 @@ def signup():
                 "email": email,
                 "password": password,
                 "options": {
+                    # Asegúrate de que esta URL esté registrada en la configuración de Supabase
                     "email_redirect_to": "https://stock-signals.streamlit.app/confirm-account"
                 }
             })
 
             user = res.user
 
-            # Insert the user into the "users" table
+            # Insertamos el usuario en la tabla "users" después de crear la cuenta
             if user:
                 supabase.table("users").insert({
                     "id": user.id,
                     "username": email,
-                    "password": password  # Not necessary if you only use Supabase Auth
+                    "password": password  # No es necesario si solo usas Supabase Auth
                 }).execute()
 
             st.success("✅ Account created. Please check your email for confirmation.")
@@ -60,13 +61,13 @@ def signup():
 
 
 def confirm_account():
-    # This page is shown after the user clicks the confirmation link
+    # Esta página se muestra después de que el usuario hace clic en el enlace de confirmación
     st.title("Account Confirmed!")
     st.write("Thank you for confirming your account. You can now log in with your email and password.")
 
-    # Add a button to go to the login page
+    # Agregar un botón para ir a la página de login
     if st.button("Go to Login"):
-        st.session_state.pop("user", None)
+        st.session_state.pop("user", None)  # Limpiar cualquier sesión de usuario actual
         st.success("Logged out. Now you can login.")
         st.rerun()
 
@@ -75,4 +76,4 @@ def logout():
     if st.sidebar.button("Logout"):
         st.session_state.pop("user", None)
         st.success("Logged out")
-        st.rerun()  # Puedes usar st.rerun() también aquí si quieres evitar la advertencia
+        st.rerun()  # También puedes usar st.rerun() aquí para recargar la página
