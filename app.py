@@ -8,18 +8,17 @@ from scripts.macd_1mo import analizar_macd_mensual
 
 st.set_page_config(page_title="Stock Signals", layout="centered")
 
-
 # Función para sugerencias de tickers desde Yahoo Finance
 def buscar_tickers_similares(entrada):
     url = f"https://query2.finance.yahoo.com/v1/finance/search?q={entrada}"
     try:
         response = requests.get(url)
         resultados = response.json()
-        sugerencias = [r["symbol"] for r in resultados.get("quotes", []) if "symbol" in r]
+        sugerencias = [f"{r['symbol']} - {r.get('shortname', '')}"
+                       for r in resultados.get("quotes", []) if "symbol" in r]
         return sugerencias
     except:
         return []
-
 
 # Autenticación
 if "user" not in st.session_state:
@@ -51,7 +50,6 @@ else:
     st.info("No tickers added yet.")
 
 # Agregar nuevo ticker
-
 st.subheader("➕ Add a ticker")
 
 query = st.text_input("🔍 Search a company or ticker", key="ticker_search")
@@ -80,7 +78,6 @@ if sugerencias:
         add_ticker(user_id, ticker_seleccionado)
         st.success(f"{ticker_seleccionado} agregado correctamente.")
         st.rerun()
-
 else:
     st.info("Start typing a company or ticker name.")
 
