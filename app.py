@@ -1,6 +1,6 @@
 import streamlit as st
 import yfinance as yf
-import requests
+from yahooquery import search
 from db import get_tickers, add_ticker, remove_ticker
 from auth import login, signup, logout
 from supabase_client import supabase
@@ -8,16 +8,15 @@ from scripts.macd_1mo import analizar_macd_mensual
 
 st.set_page_config(page_title="Stock Signals", layout="centered")
 
-# Función para sugerencias de tickers desde Yahoo Finance
+# Función para sugerencias de tickers desde Yahoo Finance usando yahooquery
 def buscar_tickers_similares(entrada):
-    url = f"https://query2.finance.yahoo.com/v1/finance/search?q={entrada}"
     try:
-        response = requests.get(url)
-        resultados = response.json()
-        sugerencias = [f"{r['symbol']} - {r.get('shortname', '')}"
-                       for r in resultados.get("quotes", []) if "symbol" in r]
+        resultados = search(entrada)
+        sugerencias = [f"{item['symbol']} - {item.get('shortname', '')}"
+                       for item in resultados.get("quotes", []) if "symbol" in item]
         return sugerencias
-    except:
+    except Exception as e:
+        st.warning("No se pudo obtener sugerencias. Verifica tu conexión.")
         return []
 
 # Autenticación
@@ -127,6 +126,7 @@ if st.button("Run analysis"):
                 for ticker in resultados["sin_procesar"]:
                     st.markdown(f"- {ticker}")
 
+# Botón de café
 coffee_link = st.secrets["BUYMEACOFFEE_LINK"]
 
 st.markdown("---")
