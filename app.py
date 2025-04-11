@@ -1,6 +1,5 @@
 import streamlit as st
 import yfinance as yf
-from yahooquery import search as ysearch
 import requests
 from db import get_tickers, add_ticker, remove_ticker
 from auth import login, signup, logout
@@ -8,6 +7,7 @@ from supabase_client import supabase
 from scripts.macd_1mo import analizar_macd_mensual
 
 st.set_page_config(page_title="Stock Signals", layout="centered")
+
 
 # Función para sugerencias de tickers desde Yahoo Finance
 def buscar_tickers_similares(entrada):
@@ -19,6 +19,7 @@ def buscar_tickers_similares(entrada):
         return sugerencias
     except:
         return []
+
 
 # Autenticación
 if "user" not in st.session_state:
@@ -45,7 +46,7 @@ if tickers:
         with col2:
             if st.button("❌", key=f"rm_{ticker}"):
                 remove_ticker(user_id, ticker)
-                st.experimental_rerun()
+                st.rerun()
 else:
     st.info("No tickers added yet.")
 
@@ -57,28 +58,29 @@ query = st.text_input("🔍 Search a company or ticker", key="ticker_search")
 sugerencias = []
 
 if query:
-    try:
-        resultados = ysearch(query)
-        sugerencias = [f"{item['symbol']} - {item.get('shortname', '')}"
-                       for item in resultados.get("quotes", []) if "symbol" in item]
-    except:
-        sugerencias = []
+    sugerencias = buscar_tickers_similares(query)
 
 if sugerencias:
     selected = st.selectbox("Select a ticker", sugerencias, key="select_suggestion")
     ticker_seleccionado = selected.split(" - ")[0]
 
     if st.button("Add Ticker"):
+        ticker_seleccionado = ticker_seleccionado.upper()
+
+        # Verificación opcional: ¿tiene precios?
         try:
-            data = yf.Ticker(ticker_seleccionado).info
-            if data:
-                add_ticker(user_id, ticker_seleccionado)
-                st.success(f"{ticker_seleccionado} added.")
-                st.experimental_rerun()
+            data = yf.download(ticker_seleccionado, period="5d")
+            if data.empty:
+                st.warning(f"⚠️ {ticker_seleccionado} agregado, pero no se encontraron precios recientes.")
             else:
-                raise ValueError("Empty info")
-        except:
-            st.error("❌ Could not validate ticker.")
+                st.success(f"✅ {ticker_seleccionado} tiene precios disponibles.")
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo verificar el precio de {ticker_seleccionado}, pero fue agregado igual.")
+
+        add_ticker(user_id, ticker_seleccionado)
+        st.success(f"{ticker_seleccionado} agregado correctamente.")
+        st.rerun()
+
 else:
     st.info("Start typing a company or ticker name.")
 
