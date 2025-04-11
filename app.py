@@ -8,6 +8,7 @@ from scripts.macd_1mo import analizar_macd_mensual
 
 st.set_page_config(page_title="Stock Signals", layout="centered")
 
+
 # Función para sugerencias de tickers desde Yahoo Finance usando yahooquery
 def buscar_tickers_similares(entrada):
     try:
@@ -64,19 +65,22 @@ if sugerencias:
     if st.button("Add Ticker"):
         ticker_seleccionado = ticker_seleccionado.upper()
 
-        # Verificación opcional: ¿tiene precios?
-        try:
-            data = yf.download(ticker_seleccionado, period="5d")
-            if data.empty:
-                st.warning(f"⚠️ {ticker_seleccionado} agregado, pero no se encontraron precios recientes.")
-            else:
-                st.success(f"✅ {ticker_seleccionado} tiene precios disponibles.")
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo verificar el precio de {ticker_seleccionado}, pero fue agregado igual.")
+        resultado = add_ticker(user_id, ticker_seleccionado)
 
-        add_ticker(user_id, ticker_seleccionado)
-        st.success(f"{ticker_seleccionado} agregado correctamente.")
-        st.rerun()
+        if resultado == "exists":
+            st.warning(f"⚠️ {ticker_seleccionado} ya está en tu lista.")
+        elif resultado == "added":
+            try:
+                data = yf.download(ticker_seleccionado, period="5d")
+                if data.empty:
+                    st.warning(f"⚠️ {ticker_seleccionado} agregado, pero no se encontraron precios recientes.")
+                else:
+                    st.success(f"✅ {ticker_seleccionado} agregado correctamente con precios disponibles.")
+            except Exception:
+                st.success(f"✅ {ticker_seleccionado} agregado, pero no se pudo verificar el precio.")
+            st.rerun()
+        else:
+            st.error(f"❌ Error al agregar {ticker_seleccionado}. Intenta nuevamente.")
 else:
     st.info("Start typing a company or ticker name.")
 
