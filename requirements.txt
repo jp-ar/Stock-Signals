@@ -1,6 +1,4 @@
 streamlit
 yfinance
+supabase
 pandas
-numpy
-matplotlib
-# etc, según uses
