@@ -22,16 +22,29 @@ def login():
             })
 
             if res.user:
+                # Guardar en sesión
                 st.session_state["user"] = res.user
                 st.success("✅ Logged in successfully")
+
+                # Verificar si el usuario ya existe en la tabla `users`
+                existing = supabase.table("users").select("id").eq("id", res.user.id).execute()
+
+                if not existing.data:
+                    # Insertar usuario en la tabla si no existe aún
+                    supabase.table("users").insert({
+                        "id": res.user.id,
+                        "username": email
+                    }).execute()
+                    st.info("👤 User inserted into 'users' table.")
+
                 st.rerun()
+
             else:
                 st.error("❌ Login failed. Please check your credentials.")
 
         except Exception as e:
             st.error("❌ Login failed. Please try again.")
             st.exception(e)  # Puedes quitar esto en producción
-
 
 def signup():
     st.sidebar.header("🆕 Sign Up")
@@ -60,23 +73,14 @@ def signup():
             user = res.user
 
             if user:
-                # Mostrar UID para debug
                 st.write("User ID:", user.id)
-
-                # Insertar solo el id y username (email)
-                supabase.table("users").insert({
-                    "id": user.id,
-                    "username": email
-                }).execute()
-
                 st.success("✅ Account created. Please check your email to confirm it.")
             else:
-                # A veces user es None si aún no ha confirmado el email
                 st.info("✅ Signup successful. Please check your email to confirm your account before logging in.")
 
         except Exception as e:
             st.error("❌ Signup failed. Please try again.")
-            st.exception(e)  # Puedes quitar esto en producción
+            st.exception(e)
 
 
 def confirm_account():
